@@ -1,5 +1,5 @@
 // ----- 기본 캐시 이름 -----
-const CACHE_NAME = "request-system-cache-v1";
+const CACHE_NAME = "request-system-cache-v2";
 
 // ----- 캐싱할 기본 파일들 -----
 const ASSETS_TO_CACHE = [

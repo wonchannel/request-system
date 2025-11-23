@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -6,15 +6,33 @@ export default function RequestBoardFull() {
   const [list, setList] = useState([]);
   const [soundOn, setSoundOn] = useState(localStorage.getItem("soundOn") !== "off");
 
-  // 🔠 글자 크기 상태 (기본값 24px)
   const [fontSize, setFontSize] = useState(
     parseInt(localStorage.getItem("fontSize") || "24")
   );
 
-  // 🔥 로그인 유저 이름 표시
   const [userName, setUserName] = useState("");
   const navigate = useNavigate();
 
+  // 🔊 오디오 객체는 1회만 생성
+  const beepRef = useRef(null);
+
+  useEffect(() => {
+    // 오디오 1회 생성
+    beepRef.current = new Audio("/beep.mp3");
+  }, []);
+
+  // 🔊 브라우저 오디오 허용 (최초 클릭 1회만)
+  useEffect(() => {
+    function enableAudio() {
+      beepRef.current?.play().catch(() => {});
+      window.removeEventListener("click", enableAudio);
+    }
+
+    window.addEventListener("click", enableAudio);
+    return () => window.removeEventListener("click", enableAudio);
+  }, []);
+
+  // 🔐 로그인 유저 불러오기
   useEffect(() => {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
@@ -59,9 +77,11 @@ export default function RequestBoardFull() {
   // 🔥 정렬
   function sortRequests(data) {
     const priority = { "긴급": 1, "일반": 2, "소분": 3 };
+
     return data.sort((a, b) => {
       const pA = priority[a.type] || 99;
       const pB = priority[b.type] || 99;
+
       if (pA !== pB) return pA - pB;
       return new Date(a.created_at) - new Date(b.created_at);
     });
@@ -72,7 +92,6 @@ export default function RequestBoardFull() {
     if (data) setList(sortRequests(data));
   }
 
-  // 🔥 상태 변경
   async function setConfirmed(id) {
     await supabase.from("requests").update({ status: "confirmed" }).eq("id", id);
   }
@@ -87,28 +106,26 @@ export default function RequestBoardFull() {
     await supabase.from("requests").delete().eq("id", id);
   }
 
-  // 🔊 사운드
-  const beep = new Audio("/beep.mp3");
-
-  function enableAudio() {
-    beep.play().catch(() => {});
-    window.removeEventListener("click", enableAudio);
-  }
-  window.addEventListener("click", enableAudio);
-
-  // 🔥 실시간 업데이트
+  // 🔥 실시간 업데이트 (정확한 사운드 재생 포함)
   useEffect(() => {
     loadRequests();
+
     const channel = supabase
       .channel("requests-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "requests" },
         (payload) => {
+
+          // ⛔ INSERT 될 때만 beep (버튼 클릭 시 울리는 문제 해결)
           if (payload.eventType === "INSERT" && soundOn) {
-            beep.currentTime = 0;
-            beep.play().catch(() => {});
+            const sound = beepRef.current;
+            if (sound) {
+              sound.currentTime = 0;
+              sound.play().catch(() => {});
+            }
           }
+
           loadRequests();
         }
       )
@@ -124,10 +141,9 @@ export default function RequestBoardFull() {
     localStorage.setItem("soundOn", newState ? "on" : "off");
   }
 
-  // 🔥 로그아웃
-  const handleLogout = () => {
+  function handleLogout() {
     navigate("/logout");
-  };
+  }
 
   return (
     <div
@@ -138,7 +154,7 @@ export default function RequestBoardFull() {
         width: "100vw",
       }}
     >
-      {/* 🔥 상단 영역: 사용자 이름 + 로그아웃 버튼 + 글자 조절 + 사운드 */}
+      {/* 상단 메뉴 */}
       <div
         style={{
           display: "flex",
@@ -147,13 +163,11 @@ export default function RequestBoardFull() {
           marginBottom: "25px",
         }}
       >
-        {/* 👤 로그인 사용자 */}
         <div style={{ fontSize: fontSize, color: "#333" }}>
           👤 로그인: <strong>{userName}</strong>
         </div>
 
         <div>
-          {/* 🔤 글자 크기 */}
           <button
             onClick={decreaseFont}
             style={{
@@ -176,7 +190,6 @@ export default function RequestBoardFull() {
             ➕ 글자확대
           </button>
 
-          {/* 🔊 사운드 */}
           <button
             onClick={toggleSound}
             style={{
@@ -192,7 +205,6 @@ export default function RequestBoardFull() {
             🔊 사운드 {soundOn ? "ON" : "OFF"}
           </button>
 
-          {/* 🚪 로그아웃 */}
           <button
             onClick={handleLogout}
             style={{
@@ -249,7 +261,12 @@ export default function RequestBoardFull() {
 
               <td>{new Date(row.created_at).toLocaleString()}</td>
 
-              <td style={{ fontWeight: "bold", color: row.status === "confirmed" ? "red" : "black" }}>
+              <td
+                style={{
+                  fontWeight: "bold",
+                  color: row.status === "confirmed" ? "red" : "black",
+                }}
+              >
                 {row.status === "confirmed" ? "확인" : "대기"}
               </td>
 

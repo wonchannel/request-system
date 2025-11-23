@@ -8,22 +8,38 @@ export default function RequestBoard() {
     localStorage.getItem("soundOn") !== "off"
   );
 
-  // 🔥 로그인 사용자 이름 표시용 상태
+  // 🔥 로그인 사용자 이름
   const [userName, setUserName] = useState("");
-
   const navigate = useNavigate();
 
-  // 🔥 로그인 사용자 로딩 (profiles에서 이름 가져오기)
+  // 🔊 오디오 객체 (한 번만 생성)
+  const beepRef = useRef(null);
+
+  useEffect(() => {
+    // 오디오 객체 한 번만 생성
+    beepRef.current = new Audio("/beep.mp3");
+  }, []);
+
+  // 🔊 브라우저 오디오 사용 허용 (초기 1회 클릭)
+  useEffect(() => {
+    function enableAudio() {
+      beepRef.current?.play().catch(() => {});
+      window.removeEventListener("click", enableAudio);
+    }
+
+    window.addEventListener("click", enableAudio);
+    return () => window.removeEventListener("click", enableAudio);
+  }, []);
+
+  // 🔐 로그인 사용자 정보 로드
   useEffect(() => {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
       const user = data?.user;
-
       if (!user) return;
 
       const userId = user.id;
 
-      // 🔥 profiles에서 display_name 가져오기
       const { data: profile } = await supabase
         .from("profiles")
         .select("display_name")
@@ -37,34 +53,18 @@ export default function RequestBoard() {
 
       setUserName(name);
     }
+
     loadUser();
   }, []);
 
-  // 🔊 오디오 객체 (한 번만 생성)
-  const beepRef = useRef(null);
-
-  // 🔊 브라우저 오디오 허용 (첫 사용자 클릭)
-  useEffect(() => {
-    function enableAudio() {
-      if (beepRef.current) {
-        beepRef.current.play().catch(() => {});
-      }
-      window.removeEventListener("click", enableAudio);
-    }
-    window.addEventListener("click", enableAudio);
-
-    return () => window.removeEventListener("click", enableAudio);
-  }, []);
-
-  // 🔥 정렬: 긴급 → 일반 → 소분
+  // 🔥 정렬: 긴급 > 일반 > 소분
   function sortRequests(data) {
     const priority = { "긴급": 1, "일반": 2, "소분": 3 };
-
     return data.sort((a, b) => {
       const pA = priority[a.type] || 99;
       const pB = priority[b.type] || 99;
-      if (pA !== pB) return pA - pB;
 
+      if (pA !== pB) return pA - pB;
       return new Date(a.created_at) - new Date(b.created_at);
     });
   }
@@ -88,22 +88,25 @@ export default function RequestBoard() {
     await supabase.from("requests").delete().eq("id", id);
   }
 
-  // 🔥 실시간 업데이트
+  // 🔥 실시간 감시 + INSERT 시 사운드
   useEffect(() => {
     loadRequests();
 
     const channel = supabase
-      .channel("requests-realtime")
+      .channel("requests-realtime-fixed") // 충돌 방지용 이름
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "requests" },
         (payload) => {
+          // ⛔ INSERT(새 요청)일 때만 비프음
           if (payload.eventType === "INSERT" && soundOn) {
-            if (beepRef.current) {
-              beepRef.current.currentTime = 0;
-              beepRef.current.play().catch(() => {});
+            const beep = beepRef.current;
+            if (beep) {
+              beep.currentTime = 0;
+              beep.play().catch(() => {});
             }
           }
+
           loadRequests();
         }
       )
@@ -119,25 +122,25 @@ export default function RequestBoard() {
     localStorage.setItem("soundOn", newState ? "on" : "off");
   };
 
-  // 🔥 로그아웃 버튼 클릭 시 이동
+  // 🔐 로그아웃
   const handleLogout = () => {
     navigate("/logout");
   };
 
   return (
     <div style={{ padding: "30px" }}>
-      {/* 🔊 비프 사운드 */}
-      <audio ref={beepRef} src="/beep.mp3" />
 
-      {/* 🔥 로그인 정보 + 로그아웃 */}
-      <div style={{ 
-        fontSize: "20px", 
-        marginBottom: "10px", 
-        color: "#444",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
+      {/* 로그인 사용자 & 로그아웃 */}
+      <div
+        style={{
+          fontSize: "20px",
+          marginBottom: "10px",
+          color: "#444",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <div>👤 로그인: <strong>{userName}</strong></div>
 
         <button
@@ -149,15 +152,21 @@ export default function RequestBoard() {
             color: "#fff",
             border: "none",
             borderRadius: "8px",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           로그아웃
         </button>
       </div>
 
-      {/* 제목 + 사운드 버튼 */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      {/* 제목 + 사운드 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <h2 style={{ fontSize: "34px" }}>📋 요청 현황판</h2>
 
         <button
@@ -212,8 +221,6 @@ export default function RequestBoard() {
 
               <td>{row.item}</td>
               <td>{row.qty}</td>
-
-              {/* 요청자 → 이미 display_name이 저장됨 */}
               <td>{row.requester}</td>
 
               <td>{new Date(row.created_at).toLocaleString()}</td>
@@ -231,14 +238,22 @@ export default function RequestBoard() {
                 {row.status === "pending" ? (
                   <button
                     onClick={() => setConfirmed(row.id)}
-                    style={{ marginRight: "10px", padding: "12px 18px", fontSize: "20px" }}
+                    style={{
+                      marginRight: "10px",
+                      padding: "12px 18px",
+                      fontSize: "20px",
+                    }}
                   >
                     확인
                   </button>
                 ) : (
                   <button
                     onClick={() => setPending(row.id)}
-                    style={{ marginRight: "10px", padding: "12px 18px", fontSize: "20px" }}
+                    style={{
+                      marginRight: "10px",
+                      padding: "12px 18px",
+                      fontSize: "20px",
+                    }}
                   >
                     수정
                   </button>
@@ -246,7 +261,10 @@ export default function RequestBoard() {
 
                 <button
                   onClick={() => deleteRequest(row.id)}
-                  style={{ padding: "12px 18px", fontSize: "20px" }}
+                  style={{
+                    padding: "12px 18px",
+                    fontSize: "20px",
+                  }}
                 >
                   완료
                 </button>

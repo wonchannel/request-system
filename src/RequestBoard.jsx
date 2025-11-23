@@ -8,30 +8,27 @@ export default function RequestBoard() {
     localStorage.getItem("soundOn") !== "off"
   );
 
-  // 🔥 로그인 사용자 이름
   const [userName, setUserName] = useState("");
   const navigate = useNavigate();
 
-  // 🔊 오디오 객체 (한 번만 생성)
   const beepRef = useRef(null);
 
+  // 🔊 오디오 객체 생성
   useEffect(() => {
-    // 오디오 객체 한 번만 생성
     beepRef.current = new Audio("/beep.mp3");
   }, []);
 
-  // 🔊 브라우저 오디오 사용 허용 (초기 1회 클릭)
+  // 🔊 브라우저 첫 클릭에서 오디오 허용
   useEffect(() => {
     function enableAudio() {
       beepRef.current?.play().catch(() => {});
       window.removeEventListener("click", enableAudio);
     }
-
     window.addEventListener("click", enableAudio);
     return () => window.removeEventListener("click", enableAudio);
   }, []);
 
-  // 🔐 로그인 사용자 정보 로드
+  // 🔐 로그인 사용자 불러오기
   useEffect(() => {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
@@ -88,17 +85,16 @@ export default function RequestBoard() {
     await supabase.from("requests").delete().eq("id", id);
   }
 
-  // 🔥 실시간 감시 + INSERT 시 사운드
+  // 🔥 실시간 감시 + INSERT 시 비프음
   useEffect(() => {
     loadRequests();
 
     const channel = supabase
-      .channel("requests-realtime-fixed") // 충돌 방지용 이름
+      .channel("requests-realtime-fixed")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "requests" },
         (payload) => {
-          // ⛔ INSERT(새 요청)일 때만 비프음
           if (payload.eventType === "INSERT" && soundOn) {
             const beep = beepRef.current;
             if (beep) {
@@ -141,7 +137,9 @@ export default function RequestBoard() {
           alignItems: "center",
         }}
       >
-        <div>👤 로그인: <strong>{userName}</strong></div>
+        <div>
+          👤 로그인: <strong>{userName}</strong>
+        </div>
 
         <button
           onClick={handleLogout}
@@ -200,11 +198,10 @@ export default function RequestBoard() {
           <tr style={{ height: "60px" }}>
             <th>유형</th>
             <th>상품명</th>
-            <th>수량</th>
             <th>요청자</th>
             <th>시간</th>
             <th>상태</th>
-            <th>작업</th>
+            <th colSpan={2}>작업</th>
           </tr>
         </thead>
 
@@ -220,10 +217,9 @@ export default function RequestBoard() {
               </td>
 
               <td>{row.item}</td>
-              <td>{row.qty}</td>
               <td>{row.requester}</td>
 
-              <td>{new Date(row.created_at).toLocaleString()}</td>
+              <td>{new Date(row.created_at).toTimeString().slice(0, 5)}</td>
 
               <td
                 style={{
@@ -234,14 +230,15 @@ export default function RequestBoard() {
                 {row.status === "confirmed" ? "확인" : "대기"}
               </td>
 
+              {/* 버튼: 두 칸 분리 */}
               <td>
                 {row.status === "pending" ? (
                   <button
                     onClick={() => setConfirmed(row.id)}
                     style={{
-                      marginRight: "10px",
-                      padding: "12px 18px",
+                      padding: "10px 14px",
                       fontSize: "20px",
+                      width: "100%",
                     }}
                   >
                     확인
@@ -250,20 +247,23 @@ export default function RequestBoard() {
                   <button
                     onClick={() => setPending(row.id)}
                     style={{
-                      marginRight: "10px",
-                      padding: "12px 18px",
+                      padding: "10px 14px",
                       fontSize: "20px",
+                      width: "100%",
                     }}
                   >
                     수정
                   </button>
                 )}
+              </td>
 
+              <td>
                 <button
                   onClick={() => deleteRequest(row.id)}
                   style={{
-                    padding: "12px 18px",
+                    padding: "10px 14px",
                     fontSize: "20px",
+                    width: "100%",
                   }}
                 >
                   완료

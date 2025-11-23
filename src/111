@@ -1,0 +1,18 @@
+cd C:\python\whiteboard\request-system
+
+http://localhost:5173/
+
+
+
+git config --global user.name "wonchannel"
+git config --global user.email "wonchannel@gmail.com"
+
+
+
+eden01  town01  김경규
+eden02  town02  윤종국
+eden03  town03  구옥경
+eden04  town04  김동민 
+eden05  town05  권오형
+eden06  town06  허명관
+eden07  town07  최정훈

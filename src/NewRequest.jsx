@@ -70,7 +70,7 @@ export default function NewRequest() {
           type="text"
           value={product}
           onChange={(e) => setProduct(e.target.value)}
-          style={{ fontSize: "16px", padding: "5px", width: "200px" }}
+          style={{ fontSize: "20px", padding: "10px", width: "350px" }}
         />
       </div>
 

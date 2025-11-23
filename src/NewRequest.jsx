@@ -4,7 +4,6 @@ import { supabase } from "./supabaseClient";
 export default function NewRequest() {
   const [type, setType] = useState("일반");
   const [product, setProduct] = useState("");
-  const [qty, setQty] = useState("");
   const [message, setMessage] = useState("");
 
   async function saveRequest() {
@@ -30,12 +29,11 @@ export default function NewRequest() {
       user.email?.split("@")[0] ||
       "알수없음";
 
-    // 🔥 요청 저장
+    // 🔥 요청 저장 (qty 제거)
     const { error } = await supabase.from("requests").insert({
       type: type,
       item: product,
-      qty: qty,
-      requester: requesterName, // ← 이제 display_name 저장
+      requester: requesterName,
       status: "pending",
     });
 
@@ -44,7 +42,6 @@ export default function NewRequest() {
     } else {
       setMessage("저장 완료!");
       setProduct("");
-      setQty("");
     }
   }
 
@@ -73,17 +70,6 @@ export default function NewRequest() {
           type="text"
           value={product}
           onChange={(e) => setProduct(e.target.value)}
-          style={{ fontSize: "16px", padding: "5px", width: "200px" }}
-        />
-      </div>
-
-      <div style={{ marginTop: "15px" }}>
-        <label>수량</label>
-        <br />
-        <input
-          type="text"
-          value={qty}
-          onChange={(e) => setQty(e.target.value)}
           style={{ fontSize: "16px", padding: "5px", width: "200px" }}
         />
       </div>

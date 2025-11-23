@@ -15,7 +15,6 @@ export default function LoginPage() {
 
     const loginEmail = `${username}@intofood.local`;
 
-    // 로그인 시도
     const { data, error } = await supabase.auth.signInWithPassword({
       email: loginEmail,
       password,
@@ -26,7 +25,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 🔥 로그인 성공 → user 정보 불러오기 (딜레이 없이)
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -36,23 +34,19 @@ export default function LoginPage() {
       return;
     }
 
-    // 🔥 프로필 display_name 확인
     const { data: profile } = await supabase
       .from("profiles")
       .select("display_name")
       .eq("id", user.id)
       .single();
 
-    // 🔍 프로필 정보 확인 로그
     console.log("🟦 프로필 정보:", profile);
 
-    // 🔥 display_name 없음 → 팝업 표시
     if (!profile?.display_name) {
       setShowNamePopup(true);
-      return; // ❗ 여기서 끝 → App 리로드 금지
+      return;
     }
 
-    // 🔥 display_name 있음 → 대시보드로 이동
     window.location.href = "/";
   };
 
@@ -69,7 +63,6 @@ export default function LoginPage() {
 
     if (!user) return;
 
-    // profiles 테이블 업데이트
     const { error } = await supabase
       .from("profiles")
       .update({ display_name: displayName.trim() })
@@ -80,7 +73,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 🔥 저장 후 바로 대시보드로 이동 (reload 필요 없음)
     window.location.href = "/";
   };
 
@@ -95,11 +87,25 @@ export default function LoginPage() {
         backgroundColor: "#f5f5f5",
       }}
     >
-      <h1 style={{ marginBottom: "20px" }}>📦 요청 관리 시스템</h1>
-      <p style={{ marginBottom: "40px", color: "#555" }}>
-        2층 물품 요청을 실시간으로 관리하는 시스템
-      </p>
 
+      {/* 🔥 회사 로고 + 회사명 (요청한 부분) */}
+      <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        <img
+          src="/icons/logo.png"
+          alt="회사 로고"
+          style={{
+            width: "160px",
+            marginBottom: "20px",
+            objectFit: "contain",
+          }}
+        />
+
+        <p style={{ marginTop: "10px", fontSize: "20px", color: "#333" }}>
+          이든타운에프앤비(주)
+        </p>
+      </div>
+
+      {/* 🔐 로그인 폼 */}
       <input
         type="text"
         placeholder="아이디"

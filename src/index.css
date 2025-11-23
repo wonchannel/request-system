@@ -24,17 +24,11 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
+/* 버튼 기본 스타일 */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -45,7 +39,12 @@ button {
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
+
+  /* 모바일에서 자동 반응형 */
+  width: 100%;
+  max-width: 250px;
 }
+
 button:hover {
   border-color: #646cff;
 }
@@ -64,5 +63,41 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+/* 📱 모바일 반응형 (600px 이하 화면) */
+@media (max-width: 600px) {
+
+  body {
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+  }
+
+  h1, h2, h3 {
+    font-size: 20px !important;
+  }
+
+  button {
+    font-size: 14px !important;
+    padding: 8px 12px !important;
+  }
+
+  table {
+    font-size: 14px !important;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  th, td {
+    padding: 8px !important;
+  }
+
+  /* 전체화면 페이지도 모바일 최적화 */
+  .full-header {
+    flex-direction: column;
+    gap: 10px;
   }
 }
